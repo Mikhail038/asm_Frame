@@ -1,0 +1,166 @@
+locals @@
+
+;========================================================================================
+;Draw frame
+;========================================================================================
+;Expect:        es = 0B800h
+;Parameters:	ax - X. dh - Y. bh - width. cx - high. si - ascii + color
+;Returns:	-
+;Destroys:	ax, dx, bx, cx, di, si
+;========================================================================================
+DrawFrm       	proc
+
+		mov bl, bh	;we'll need it later
+
+		shl ax, 1	;ax was half of x (cause of [ascii][color] in VRAM)
+
+		mov di, ax	;mov ax to di (it will be our ptr)
+
+		mov al, dh	;al = y
+		mov dh, 80d	;dh = screen width
+		mul dh		;y * screen width = ax
+		shl ax, 1	;mul 2 again
+
+		add di, ax	;now starting point is set
+
+		mov dx, 80d	;screen width
+		sub dl, bh	;now dx is half of shift
+		shl dx, 1	;now it is correct shift
+
+		mov ax, si	;ascii + color
+
+		push si  	;save
+		mov si, cx	;dup cx
+
+@@Line:
+				;					||
+
+@@Pixel:
+
+		cmp bh, bl
+		jne @@L1
+		cmp cx, 1
+		je PutLD
+@@L1:
+
+		cmp bh, bl
+		jne @@L2
+		cmp cx, si
+		je PutLU
+@@L2:
+
+		cmp bh, 1
+		jne @@L3
+		cmp cx, 1
+		je PutRD
+@@L3:
+
+		cmp bh, 1
+		jne @@L4
+		cmp cx, si
+		je PutRU
+@@L4:
+
+		cmp bh, 1
+		je PutLR
+
+		cmp bh, bl
+		je PutLR
+
+		cmp cx, si
+		je PutUD
+
+		cmp cx, 1
+		je PutUD
+
+		mov ax, 07DBh
+
+@@Exit:
+		stosw		;				|
+
+		sub bh, 1	;decr bh
+		cmp bh, 0	;loop
+		jne @@Pixel	;				|
+
+		add di, dx	;add shift to ptr to go next line
+		mov bh, bl	;reload counter
+		loop @@Line	;					||
+
+		pop si
+
+		ret
+
+PutLU:
+		mov ax, 70C9
+		jmp @@Exit
+
+PutRU:
+		mov ax, 70BBh
+		jmp @@Exit
+
+PutLD:
+		mov ax, 70C8
+		jmp @@Exit
+
+PutRD:
+		mov ax, 70BC
+		jmp @@Exit
+
+PutUD:
+		mov ax, 70CDh
+		jmp @@Exit
+
+PutLR:
+		mov ax, 70BA
+		jmp @@Exit
+
+DrawFrm      	endp
+
+
+
+;========================================================================================
+;Draw rectangle
+;========================================================================================
+;Expect:        es = 0B800h
+;Parameters:	ax - X. dh - Y. bh - width. cx - high. si - ascii + color
+;Returns:	-
+;Destroys:	ax, dx, bx, cx, di, si
+;========================================================================================
+DrawRect       	proc
+
+		mov bl, bh	;we'll need it later
+
+		shl ax, 1	;ax was half of x (cause of [ascii][color] in VRAM)
+
+		mov di, ax	;mov ax to di (it will be our ptr)
+
+		mov al, dh	;al = y
+		mov dh, 80d	;dh = screen width
+		mul dh		;y * screen width = ax
+		shl ax, 1	;mul 2 again
+
+		add di, ax	;now starting point is set
+
+		mov dx, 80d	;screen width
+		sub dl, bh	;now dx is half of shift
+		shl dx, 1	;now it is correct shift
+
+		mov ax, si	;ascii + color
+
+@@Line:				;					||
+@@Pixel:	;mov byte ptr es:[di],   0B0	;ascii		|
+		;mov byte ptr es:[di+1], 78	;color
+		stosw
+		;add di, 2	;move ptr
+
+		sub bh, 1	;decr bh
+		cmp bh, 0	;loop
+		jne @@Pixel	;				|
+
+		add di, dx	;add shift to ptr to go next line
+		mov bh, bl	;reload counter
+		loop @@Line	;					||
+
+			ret
+
+DrawRect      	endp
